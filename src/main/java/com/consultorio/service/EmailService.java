@@ -10,8 +10,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    private String fromEmail = "consultorio.cosmos@gmail.com";
 
     @Value("${app.base-url}")
     private String baseUrl;
