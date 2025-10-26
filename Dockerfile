@@ -2,7 +2,9 @@ FROM maven:3.8-openjdk-17 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src ./src
-RUN mvn clean package -DskipTests -Dmaven.resources.filtering=false
+# Compilar SIN filtrado de recursos
+RUN mvn compile -Dmaven.resources.filtering=false
+RUN mvn package -DskipTests -Dmaven.resources.filtering=false
 
 FROM openjdk:17-jdk-slim
 WORKDIR /app
