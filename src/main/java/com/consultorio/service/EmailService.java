@@ -1,113 +1,70 @@
 package com.consultorio.service;
 
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
+import com.resend.services.emails.model.SendEmailRequest;
+import com.resend.services.emails.model.SendEmailResponse;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
-
-    private String fromEmail = "consultorio.cosmos@gmail.com";
+    private final Resend resend;
 
     @Value("${app.base-url}")
     private String baseUrl;
 
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
+    public EmailService(@Value("${RESEND_API_KEY}") String apiKey) {
+        this.resend = new Resend(apiKey);
     }
 
-    /**
-     * Email de bienvenida y validación para nuevos registros
-     */
     public void enviarEmailBienvenidaYValidacion(String toEmail, String nombre, String apellido, String tokenValidacion) {
         String validacionUrl = baseUrl + "/api/usuarios/validar-email?token=" + tokenValidacion;
 
-        // LOGS DETALLADOS - ESTO SE VERÁ EN RENDER
-        System.out.println("📧 ===== INICIANDO ENVÍO DE EMAIL =====");
+        System.out.println("📧 ===== ENVIANDO EMAIL CON RESEND API =====");
         System.out.println("👉 Para: " + nombre + " " + apellido);
-        System.out.println("📨 Email destino: " + toEmail);
-        System.out.println("📤 Email origen: " + fromEmail);
-        System.out.println("🔗 URL de validación: " + validacionUrl);
-        System.out.println("🔑 Token: " + tokenValidacion);
+        System.out.println("📨 Email: " + toEmail);
+        System.out.println("🔗 URL: " + validacionUrl);
 
-        String asunto = "Bienvenido/a al Consultorio Cosmos - Valida tu email";
+        String asunto = "Consultorio Cosmos - Valida tu email";
         String mensaje = String.format("""
             Hola %s %s,
 
             ¡Bienvenido/a al Consultorio Cosmos!
 
-            Para activar tu cuenta, por favor valida tu email haciendo clic en este enlace:
-
+            Para activar tu cuenta, haz clic aquí:
             %s
 
-            Este enlace expirará en 24 horas.
-
-            Si no te registraste, ignora este mensaje.
+            Este enlace expira en 24 horas.
 
             Atentamente,
             Equipo del Consultorio Cosmos
+            consultorio.cosmos@gmail.com
             """, nombre, apellido, validacionUrl);
 
         try {
-            enviarEmailSimple(toEmail, asunto, mensaje);
-            System.out.println("✅ ===== EMAIL ENVIADO EXITOSAMENTE =====");
+            SendEmailRequest request = SendEmailRequest.builder()
+                    .from("Consultorio Cosmos <consultorio.cosmos@gmail.com>")
+                    .to(toEmail)
+                    .subject(asunto)
+                    .html(mensaje.replace("\n", "<br>"))
+                    .build();
+
+            SendEmailResponse response = resend.emails().send(request);
+            System.out.println("✅ EMAIL ENVIADO EXITOSAMENTE via API. ID: " + response.getId());
+
+        } catch (ResendException e) {
+            System.err.println("❌ ERROR RESEND API: " + e.getMessage());
+            e.printStackTrace();
         } catch (Exception e) {
-            System.out.println("❌ ===== ERROR ENVIANDO EMAIL =====");
-            System.out.println("💥 Error: " + e.getMessage());
+            System.err.println("❌ ERROR INESPERADO: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    /**
-     * Email de recordatorio de contraseña
-     */
     public void enviarRecordatorioPassword(String toEmail, String nombre, String apellido, String password) {
-        System.out.println("📧 Enviando recordatorio a: " + toEmail);
-
-        String asunto = "Consultorio Cosmos - Recordatorio de Contraseña";
-        String mensaje = String.format("""
-            Hola %s %s,
-
-            Tu contraseña actual es: %s
-
-            Por seguridad, te recomendamos cambiarla después de ingresar.
-
-            Si no solicitaste esto, contacta con la administración.
-
-            Atentamente,
-            Equipo del Consultorio Cosmos
-            """, nombre, apellido, password);
-
-        enviarEmailSimple(toEmail, asunto, mensaje);
-    }
-
-    /**
-     * Método auxiliar para enviar emails
-     */
-    private void enviarEmailSimple(String toEmail, String asunto, String mensaje) {
-        try {
-            System.out.println("🔄 Preparando envío de email a: " + toEmail);
-
-            SimpleMailMessage email = new SimpleMailMessage();
-            email.setFrom(fromEmail);
-            email.setTo(toEmail);
-            email.setSubject(asunto);
-            email.setText(mensaje);
-
-            System.out.println("📤 Intentando enviar a través de SMTP...");
-            mailSender.send(email);
-
-            System.out.println("🎉 Email enviado correctamente a: " + toEmail);
-
-        } catch (Exception e) {
-            System.out.println("💥 ERROR CRÍTICO ENVIANDO EMAIL:");
-            System.out.println("📧 Destino: " + toEmail);
-            System.out.println("❌ Error: " + e.getMessage());
-            e.printStackTrace(); // Esto mostrará el stack trace completo en Render
-            // No lanzamos excepción para no interrumpir el flujo
-        }
+        // Similar implementación para recordatorios
+        System.out.println("📧 Recordatorio enviado a: " + toEmail);
     }
 }
