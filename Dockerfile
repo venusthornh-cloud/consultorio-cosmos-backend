@@ -1,9 +1,13 @@
 FROM maven:3.8-openjdk-17 AS build
 WORKDIR /app
 COPY pom.xml .
-COPY src ./src
-# Compilar SIN filtrado de recursos
-RUN mvn compile -Dmaven.resources.filtering=false
+# Copiar solo código Java primero
+COPY src/main/java ./src/main/java
+# Compilar sin resources
+RUN mvn compile -DskipTests
+# Ahora copiar resources
+COPY src/main/resources ./src/main/resources
+# Empaquetar sin procesar resources
 RUN mvn package -DskipTests -Dmaven.resources.filtering=false
 
 FROM openjdk:17-jdk-slim
