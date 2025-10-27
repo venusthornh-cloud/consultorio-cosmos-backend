@@ -12,7 +12,7 @@ public class Paciente extends Auditoria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "usuario_id", unique = true, nullable = false)
     private Usuario usuario;
 
