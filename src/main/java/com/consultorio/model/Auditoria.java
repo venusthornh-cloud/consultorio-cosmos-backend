@@ -3,6 +3,7 @@ package com.consultorio.model;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+
 @MappedSuperclass
 public class Auditoria {
 
@@ -42,3 +43,4 @@ public class Auditoria {
     public LocalDateTime getFechaActualizacion() { return fechaActualizacion; }
     public void setFechaActualizacion(LocalDateTime fechaActualizacion) { this.fechaActualizacion = fechaActualizacion; }
 }
+
