@@ -97,5 +97,3 @@ run el ícono
 - [ ] Conectar módulo de pagos con Mercado Pago API
 - [ ] Integrar envío de recordatorios automáticos (Resend) (falta compra de dominio)
 - [ ] Sincronización entre escritorio y web
-
-PA QUE ANDE EL SERVIDOR
