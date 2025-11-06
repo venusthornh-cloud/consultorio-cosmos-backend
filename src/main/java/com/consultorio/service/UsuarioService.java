@@ -1,6 +1,7 @@
 package com.consultorio.service;
 
 import com.consultorio.model.Usuario;
+import com.consultorio.model.Usuario.TipoUsuario;
 import com.consultorio.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,8 +38,13 @@ public class UsuarioService {
         return usuarioRepository.findByDniAndPassword(dni, password);
     }
 
-    // Crear nuevo usuario
+    // Crear nuevo usuario (sin auditoría - para compatibilidad)
     public Usuario save(Usuario usuario) {
+        return save(usuario, null);
+    }
+
+    // Crear nuevo usuario (con auditoría)
+    public Usuario save(Usuario usuario, String usuarioCreador) {
         // Verificar si el DNI ya existe
         if (usuarioRepository.existsByDni(usuario.getDni())) {
             throw new RuntimeException("Ya existe un usuario con el DNI: " + usuario.getDni());
@@ -53,18 +59,29 @@ public class UsuarioService {
         usuario.generarTokenValidacion();  // Generar token único
         usuario.setEmailValidado(false);   // Email no validado por defecto
         usuario.setActivo(true);           // Usuario activo por defecto
-        usuario.setCreadoPor("sistema");   // Auditoría
+
+        // Auditoría: usar el usuario creador si se proporciona, sino "sistema"
+        if (usuarioCreador != null && !usuarioCreador.isEmpty()) {
+            usuario.setCreadoPor(usuarioCreador);
+        } else {
+            usuario.setCreadoPor("sistema");
+        }
 
         // PRIMERO guardar el usuario en la base de datos
         Usuario usuarioGuardado = usuarioRepository.save(usuario);
 
         // LUEGO enviar el email (esto puede fallar pero el usuario ya está guardado)
         try {
+            // Si es paciente o secretaria, enviar la contraseña en el email
+            String passwordParaEmail = (usuarioGuardado.getTipo() == TipoUsuario.PACIENTE ||
+                                       usuarioGuardado.getTipo() == TipoUsuario.SECRETARIA) ? "Primera_Vez" : null;
+
             emailService.enviarEmailBienvenidaYValidacion(
                     usuarioGuardado.getEmail(),
                     usuarioGuardado.getNombre(),
                     usuarioGuardado.getApellido(),
-                    usuarioGuardado.getTokenValidacion()
+                    usuarioGuardado.getTokenValidacion(),
+                    passwordParaEmail
             );
             System.out.println("✅ Email de validación enviado a: " + usuarioGuardado.getEmail());
         } catch (Exception e) {
@@ -75,8 +92,13 @@ public class UsuarioService {
         return usuarioGuardado;
     }
 
-    // Actualizar usuario
+    // Actualizar usuario (sin auditoría - para compatibilidad)
     public Usuario update(Long id, Usuario usuarioActualizado) {
+        return update(id, usuarioActualizado, null);
+    }
+
+    // Actualizar usuario (con auditoría)
+    public Usuario update(Long id, Usuario usuarioActualizado, String usuarioModificador) {
         return usuarioRepository.findById(id)
                 .map(usuarioExistente -> {
                     // Actualizar campos permitidos
@@ -88,8 +110,12 @@ public class UsuarioService {
                     usuarioExistente.setMatricula(usuarioActualizado.getMatricula());
                     usuarioExistente.setActivo(usuarioActualizado.getActivo());
 
-                    // Auditoría
-                    usuarioExistente.setActualizadoPor("sistema");
+                    // Auditoría: usar el usuario modificador si se proporciona, sino "sistema"
+                    if (usuarioModificador != null && !usuarioModificador.isEmpty()) {
+                        usuarioExistente.setActualizadoPor(usuarioModificador);
+                    } else {
+                        usuarioExistente.setActualizadoPor("sistema");
+                    }
 
                     return usuarioRepository.save(usuarioExistente);
                 })
@@ -131,12 +157,24 @@ public class UsuarioService {
         return usuarioRepository.countByTipo(tipo);
     }
 
-    // Activar/Desactivar usuario
+    // Activar/Desactivar usuario (sin auditoría - para compatibilidad)
     public Usuario cambiarEstado(Long id, boolean activo) {
+        return cambiarEstado(id, activo, null);
+    }
+
+    // Activar/Desactivar usuario (con auditoría)
+    public Usuario cambiarEstado(Long id, boolean activo, String usuarioModificador) {
         return usuarioRepository.findById(id)
                 .map(usuario -> {
                     usuario.setActivo(activo);
-                    usuario.setActualizadoPor("sistema");
+
+                    // Auditoría: usar el usuario modificador si se proporciona, sino "sistema"
+                    if (usuarioModificador != null && !usuarioModificador.isEmpty()) {
+                        usuario.setActualizadoPor(usuarioModificador);
+                    } else {
+                        usuario.setActualizadoPor("sistema");
+                    }
+
                     return usuarioRepository.save(usuario);
                 })
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
