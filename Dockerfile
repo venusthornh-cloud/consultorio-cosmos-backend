@@ -10,7 +10,7 @@ COPY src/main/resources ./src/main/resources
 # Empaquetar sin procesar resources
 RUN mvn package -DskipTests -Dmaven.resources.filtering=false
 
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
